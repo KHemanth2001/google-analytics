@@ -1,40 +1,59 @@
+import csv
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import (
+    DateRange,
+    Dimension,
+    Metric,
+    RunReportRequest,
+)
 import os
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 
-def get_analytics_data():
-    # Load Service Account credentials from the JSON file
-    credentials_path = 'C:/Users/user3/Downloads/opendata-214506-28bf7540053e.json'
-    credentials = service_account.Credentials.from_service_account_file(credentials_path)
+property_id = "353814524"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "automation-25cff4119eb3.json"
 
-    # Build the Google Analytics Reporting API client
-    analytics = build('analyticsreporting', 'v4', credentials=credentials)
+def format_date(date_str):
+    # Assuming the input date_str is in the format "YYYYMMDD"
+    # Convert it to "yyyy-mm-dd" format
+    year = date_str[:4]
+    month = date_str[4:6]
+    day = date_str[6:]
+    return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
 
-    # Query parameters
-    metric = {'expression': 'ga:pageviews'}
-    date_range = {'start_date': '7daysAgo', 'end_date': 'today'}
-    dimensions = []  # You can add dimensions if needed
+def sample_run_report(property_id):
+    """Runs a simple report on a Google Analytics 4 property."""
+    # Using a default constructor instructs the client to use the credentials
+    # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
+    client = BetaAnalyticsDataClient()
 
-    # Build the request with the dummy viewId parameter
-    request = {
-        'viewId': 'ga:123456789',  # Replace this with any dummy number
-        'dateRanges': [date_range],
-        'metrics': [metric],
-        'dimensions': dimensions
-    }
+    request = RunReportRequest(
+        property=f"properties/{property_id}",
+        dimensions=[Dimension(name="date")],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="screenPageViews"),
+            Metric(name="eventCount"),
+            Metric(name="userEngagementDuration"),
+        ],
+        date_ranges=[DateRange(start_date="2022-06-01", end_date="today")],
+    )
+    response = client.run_report(request)
 
-    try:
-        # Execute the request and get the response
-        response = analytics.reports().batchGet(body={'reportRequests': [request]}).execute()
+    csv_filename = "analytics_report.csv"
 
-        # Process the response and extract the data
-        data = response['reports'][0]['data']['rows'][0]['metrics'][0]['values'][0]
-        return int(data)
-    except Exception as e:
-        print(f"Error: {e}")
-        return None
+    print("Report result:")
+    with open(csv_filename, mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Date", "Sessions", "Screen Pageviews", "Event Count", "User Engagement Duration"])
 
-if __name__ == "__main__":
-    pageviews = get_analytics_data()
-    if pageviews is not None:
-        print(f"Pageviews in the last 7 days (Account & Property level): {pageviews}")
+        for row in response.rows:
+            date = format_date(row.dimension_values[0].value)
+            sessions = row.metric_values[0].value
+            screen_pageviews = row.metric_values[1].value
+            event_count = row.metric_values[2].value
+            user_engagement_duration = row.metric_values[3].value
+
+            writer.writerow([date, sessions, screen_pageviews, event_count, user_engagement_duration])
+
+    print(f"Data has been saved to {csv_filename}")
+
+sample_run_report(property_id)
