@@ -8,8 +8,17 @@ from google.analytics.data_v1beta.types import (
 )
 import os
 
+DIR_PATH = os.path.abspath(os.path.dirname(__file__))
+folder_name = "\_Output"
+path = DIR_PATH + folder_name
+try:
+    os.mkdir(path)
+except OSError as error:
+        print(error)
+
+
 property_id = "353814524"
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "automation-25cff4119eb3.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/user3/Downloads/automation-25cff4119eb3.json"
 
 def format_date(date_str):
     # Assuming the input date_str is in the format "YYYYMMDD"
@@ -38,7 +47,7 @@ def sample_run_report(property_id):
     )
     response = client.run_report(request)
 
-    csv_filename = "analytics_report.csv"
+    csv_filename = os.path.join(path, "analytics_report.csv")
 
     print("Report result:")
     with open(csv_filename, mode="w", newline="") as file:
