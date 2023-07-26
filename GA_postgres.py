@@ -11,36 +11,29 @@ import os
 
 DIR_PATH = os.path.abspath(os.path.dirname(__file__))
 folder_name = "\_Output"
-filename="analytics_report.csv"
-path = DIR_PATH + folder_name
+filename = "analytics_report.csv"
+path = os.path.join(DIR_PATH, folder_name)
 try:
     os.mkdir(path)
 except OSError as error:
-        print(error)
-
+    print(error)
 
 property_id = "353814524"
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/user3/Downloads/automation-25cff4119eb3.json"
 
-
-
 def format_date(date_str):
-    # Assuming the input date_str is in the format "YYYYMMDD"
-    # Convert it to "yyyy-mm-dd" format
     year = date_str[:4]
     month = date_str[4:6]
-    day = date_str[6:]
-    return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+    day = date_str[6:8]
+    hour = date_str[8:10]
+    return f"{year}-{month.zfill(2)}-{day.zfill(2)} {hour}:00:00"
 
 def sample_run_report(property_id):
-    """Runs a simple report on a Google Analytics 4 property."""
-    # Using a default constructor instructs the client to use the credentials
-    # specified in GOOGLE_APPLICATION_CREDENTIALS environment variable.
     client = BetaAnalyticsDataClient()
 
     request = RunReportRequest(
         property=f"properties/{property_id}",
-        dimensions=[Dimension(name="date")],
+        dimensions=[Dimension(name="dateHour")],
         metrics=[
             Metric(name="sessions"),
             Metric(name="screenPageViews"),
@@ -70,22 +63,23 @@ def sample_run_report(property_id):
     print(f"Data has been saved to {csv_filename}")
 
 def table(filename):
-    conn=psycopg2.connect(host='localhost',dbname='postgres',user='postgres',password='1234',port=5432)
+    conn = psycopg2.connect(host='localhost', dbname='postgres', user='postgres', password='1234', port=5432)
     cur = conn.cursor()
-    path=os.path.join(DIR_PATH,folder_name, filename)
+    path = os.path.join(DIR_PATH, folder_name, filename)
 
-    #create table
+    # Create table
     cur.execute('''CREATE TABLE IF NOT EXISTS DATA(
-     Date DATE NOT NULL,
+     Date TIMESTAMP NOT NULL,
      sessions INTEGER,
      screenPageViews INTEGER,
      eventCount INTEGER,
      userEngagementDuration INTEGER)''')
 
-    print("table created")
-    #copy data from csv
-    sql2 = '''COPY DATA(Date,Sessions,ScreenPageviews, EventCount, UserEngagementDuration)
-    FROM 'E:/google_analytics/_Output/analytics_report.csv'
+    print("Table created")
+
+    # Copy data from CSV
+    sql2 = f'''COPY DATA(Date, Sessions, ScreenPageviews, EventCount, UserEngagementDuration)
+    FROM '{path}'
     DELIMITER ','
     CSV HEADER;'''
 
